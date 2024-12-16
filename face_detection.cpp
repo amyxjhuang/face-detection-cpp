@@ -28,7 +28,7 @@ int main(int argc, const char** argv)
     nestedCascade.load( "opencv/data/haarcascades/haarcascade_eye_tree_eyeglasses.xml" ) ;
 
     faceCascade.load( "opencv/data/haarcascades/haarcascade_frontalcatface.xml" ) ; 
-    capture.open(0);
+    capture.open(1); // Use macbook camera
     if (capture.isOpened()) {
         cout << "Started detecting face" << endl;
         while (capture.read(frame)) {
