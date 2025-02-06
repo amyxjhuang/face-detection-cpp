@@ -45,6 +45,21 @@ int main(int argc, const char** argv)
     return 0;
 }
 
+vector<Point> findLargestContour(vector<vector<Point>> contours) {
+    vector<Point> largestContour;
+    double maxArea = 0.0;
+
+    for (size_t i = 0; i < contours.size(); i++) {
+        double area = contourArea(contours[i]);
+        if (area > maxArea) {
+            maxArea = area;
+            largestContour = contours[i];
+        }
+    }
+    return largestContour;
+}
+
+
 void detectAndDisplay(Mat& img, CascadeClassifier& faceCascade, CascadeClassifier& eyeglassesCascade, double scaleFactor) 
 {
     vector<Rect> faces, faces2;
@@ -77,9 +92,73 @@ void detectAndDisplay(Mat& img, CascadeClassifier& faceCascade, CascadeClassifie
                 Rect nr = nestedObjects[j];
                 center.x = cvRound((r.x + nr.x + nr.width*0.5)*scaleFactor);
                 center.y = cvRound((r.y + nr.y + nr.height*0.5)*scaleFactor);
-                ellipse(img, center, Size(nr.width*0.5*fx, nr.height*0.5*fx), 0, 0, 360, blue, 4, 8, 0);
+
+                // draws circles around the eyes
+                // ellipse(img, center, Size(nr.width*0.5*fx, nr.height*0.5*fx), 0, 0, 360, blue, 4, 8, 0); 
             }
         }
     }
-    imshow("result", img);
+    Mat blurred, thresholded;
+    // Rect face = faces[0];  // Exclude above the first face
+    // int handRegionY = face.y + face.height + 10;  // Area below face
+
+    // Rect handROI(0, handRegionY, img.cols, img.rows - handRegionY);
+    // Mat handRegion = img(handROI);
+    // rectangle(img, handROI, 1);
+
+    // // Process only the hand region
+    // cvtColor(handRegion, gray, COLOR_BGR2GRAY);
+
+    GaussianBlur(gray, blurred, Size(5, 5), 0);
+    // adaptiveThreshold(blurred, thresholded, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, 11, 2);
+    threshold(blurred, thresholded, 60, 255, THRESH_BINARY_INV);
+    vector<vector<Point>> contours;
+    vector<Vec4i> hierarchy;
+    
+    findContours(thresholded, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+
+    if (!contours.empty()) {
+        vector<Point> largestContour = findLargestContour(contours);
+
+        if (!largestContour.empty() && largestContour.size() > 3) {
+            drawContours(img, vector<vector<Point>>{largestContour}, -1, Scalar(0, 255, 0), 2);
+
+            // Find Convex Hull
+            vector<int> hullIndices;
+            convexHull(largestContour, hullIndices, false, false);
+
+            std::sort(hullIndices.begin(), hullIndices.end()); 
+            // Find Convexity Defects
+            vector<Vec4i> convexityDefectsVec;
+
+            vector<Point> approxContour;
+            approxPolyDP(largestContour, approxContour, 5, true);  
+            if (approxContour.size() > 3 && hullIndices.size() > 3) {
+                convexityDefects(largestContour, hullIndices, convexityDefectsVec);
+
+                for (size_t i = 0; i < convexityDefectsVec.size(); i++) {
+                    Vec4i defect = convexityDefectsVec[i];
+                    Point start = largestContour[defect[0]];
+                    Point end = largestContour[defect[1]];
+                    Point far = largestContour[defect[2]];
+
+                    // Draw convex hull points
+                    circle(img, start, 5, Scalar(255, 0, 0), -1);
+                    circle(img, end, 5, Scalar(255, 0, 0), -1);
+                    circle(img, far, 5, Scalar(0, 0, 255), -1);
+
+                    // Draw convexity defect line
+                    line(img, start, end, Scalar(0, 255, 255), 2);
+                    line(img, start, far, Scalar(255, 255, 0), 2);
+                    line(img, end, far, Scalar(255, 255, 0), 2);
+                }
+            }
+        }
+    }
+
+    // Display results
+    imshow("Hand Detection", img);
+    // imshow("Thresholded", thresholded);
+
+    // imshow("result", img);
 }
