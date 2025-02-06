@@ -92,14 +92,26 @@ void detectAndDisplay(Mat& img, CascadeClassifier& faceCascade, CascadeClassifie
                 Rect nr = nestedObjects[j];
                 center.x = cvRound((r.x + nr.x + nr.width*0.5)*scaleFactor);
                 center.y = cvRound((r.y + nr.y + nr.height*0.5)*scaleFactor);
-                ellipse(img, center, Size(nr.width*0.5*fx, nr.height*0.5*fx), 0, 0, 360, blue, 4, 8, 0);
+
+                // draws circles around the eyes
+                // ellipse(img, center, Size(nr.width*0.5*fx, nr.height*0.5*fx), 0, 0, 360, blue, 4, 8, 0); 
             }
         }
     }
     Mat blurred, thresholded;
+    // Rect face = faces[0];  // Exclude above the first face
+    // int handRegionY = face.y + face.height + 10;  // Area below face
+
+    // Rect handROI(0, handRegionY, img.cols, img.rows - handRegionY);
+    // Mat handRegion = img(handROI);
+    // rectangle(img, handROI, 1);
+
+    // // Process only the hand region
+    // cvtColor(handRegion, gray, COLOR_BGR2GRAY);
+
     GaussianBlur(gray, blurred, Size(5, 5), 0);
-    adaptiveThreshold(blurred, thresholded, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, 11, 2);
-    // threshold(blurred, thresholded, 60, 255, THRESH_BINARY_INV);
+    // adaptiveThreshold(blurred, thresholded, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, 11, 2);
+    threshold(blurred, thresholded, 60, 255, THRESH_BINARY_INV);
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
     
@@ -115,12 +127,7 @@ void detectAndDisplay(Mat& img, CascadeClassifier& faceCascade, CascadeClassifie
             vector<int> hullIndices;
             convexHull(largestContour, hullIndices, false, false);
 
-            std::sort(hullIndices.begin(), hullIndices.end());
-            for (int i : hullIndices) {
-                cout << i << " ";
-            }
-            cout << endl;
-
+            std::sort(hullIndices.begin(), hullIndices.end()); 
             // Find Convexity Defects
             vector<Vec4i> convexityDefectsVec;
 
